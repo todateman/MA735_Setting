@@ -20,6 +20,8 @@ void printHelp() {
   Serial.println("  Reads the register at address 'reg'.");
   Serial.println("w reg val");
   Serial.println("  Writes 'val' to the register at address 'reg'.");
+  Serial.println("z");
+  Serial.println("  Set the current angle to the zero position.");
 }
 
 int parseArgument(String arg) {
@@ -102,6 +104,49 @@ void executeCommand(String command, String arg1, String arg2) {
   } else if (command == "r") {
     uint8_t reg = parseArgument(arg1);
     Serial.println(readReg(reg), HEX);
+  } else if (command == "z") {
+    // 現在の角度を取得
+    int setangle = readAngle();
+    Serial.print("angle: ");
+    Serial.print(setangle);
+    Serial.println(" -> 0");
+
+    // 角度を16bitの2進数に変換
+    String setangle_bin;
+    setangle_bin = String(setangle, BIN);
+    if(16 > setangle_bin.length()) {
+      String returnStr = "";
+      for(int i = 0; i < 16 - setangle_bin.length(); i++){
+        returnStr += '0';
+      }
+      setangle_bin = returnStr + setangle_bin;
+    }
+
+    // 角度を8bit+8bitに分割してレジスタに書き込み
+    uint8_t val = 128 * setangle_bin.substring(0, 1).toInt()
+                + 64  * setangle_bin.substring(1, 2).toInt()
+                + 32  * setangle_bin.substring(2, 3).toInt()
+                + 16  * setangle_bin.substring(3, 4).toInt()
+                + 8   * setangle_bin.substring(4, 5).toInt()
+                + 4   * setangle_bin.substring(5, 6).toInt()
+                + 2   * setangle_bin.substring(6, 7).toInt()
+                + 1   * setangle_bin.substring(7, 8).toInt();
+    Serial.print("0x01: ");
+    Serial.println(writeReg(1, val), HEX);
+
+    val         = 128 * setangle_bin.substring(8, 9).toInt()
+                + 64  * setangle_bin.substring(9, 10).toInt()
+                + 32  * setangle_bin.substring(10, 11).toInt()
+                + 16  * setangle_bin.substring(11, 12).toInt()
+                + 8   * setangle_bin.substring(12, 13).toInt()
+                + 4   * setangle_bin.substring(13, 14).toInt()
+                + 2   * setangle_bin.substring(14, 15).toInt()
+                + 1   * setangle_bin.substring(15, 16).toInt();
+    Serial.print("0x00: ");
+    Serial.println(writeReg(0, val), HEX);
+    
+    // ゼロ位置設定後の現在の角度を取得
+    Serial.print(readAngle());
   } else {
     printHelp();
   }
