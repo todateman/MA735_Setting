@@ -10,6 +10,7 @@ SPISettings settings = SPISettings(10000000, MSBFIRST, SPI_MODE0);
 uint32_t angle_interval = 0;
 uint32_t angle_last = 0;
 
+// ヘルプ表示
 void printHelp() {
   Serial.println("MA735 Register Settings available commands:");
   Serial.println("d");
@@ -30,6 +31,17 @@ void printHelp() {
   Serial.println("  Set the number of pulses per rotation.");
 }
 
+// 8ビット2進数と16進数を表示
+void printBinary8(uint8_t num) {
+  Serial.print(" 0b");
+  for (int i = 7; i >= 0; i--) {
+    Serial.print((num >> i) & 1);
+  }
+  Serial.print(" 0x");
+  Serial.println(num, HEX);
+}
+
+// 引数を解析して数値に変換
 int parseArgument(String arg) {
   if (arg.startsWith("0x")) {
     return (int)strtol(arg.c_str(), NULL, 16);  // 16進数として解析
@@ -42,6 +54,7 @@ int parseArgument(String arg) {
   }
 }
 
+// レジスタの読み取り
 uint8_t readReg(uint8_t reg) {
   SPI.beginTransaction(settings);
   digitalWrite(MA735_CS, LOW);
@@ -57,6 +70,7 @@ uint8_t readReg(uint8_t reg) {
   return rd >> 8;
 }
 
+// レジスタの書き込み
 uint8_t writeReg(uint8_t reg, uint8_t val) {
   SPI.beginTransaction(settings);
   digitalWrite(MA735_CS, LOW);
@@ -72,6 +86,7 @@ uint8_t writeReg(uint8_t reg, uint8_t val) {
   return rd >> 8;
 }
 
+// 角度の読み取り
 uint16_t readAngle() {
   SPI.beginTransaction(settings);
   digitalWrite(MA735_CS, LOW);
@@ -81,30 +96,53 @@ uint16_t readAngle() {
   return rd;
 }
 
+// コマンドの実行
 void executeCommand(String command, String arg1, String arg2) {
+  uint8_t regValue = 0;
   if (command == "d") {       // 全レジスタ表示
-    Serial.print("0x00 Z[7:0]\n 0x");
-    Serial.println(readReg(0x0), HEX);
-    Serial.print("0x01 Z[15:8]\n 0x");
-    Serial.println(readReg(0x1), HEX);
-    Serial.print("0x02 BCT[7:0]\n 0x");
-    Serial.println(readReg(0x2), HEX);
-    Serial.print("0x03 ETY:1 ETX:0\n 0x");
-    Serial.println(readReg(0x3), HEX);
-    Serial.print("0x04 PPT[1:0]:6 ILIP[3:0]:2\n 0x");
-    Serial.println(readReg(0x4), HEX);
-    Serial.print("0x05 PPT[9:2]\n 0x");
-    Serial.println(readReg(0x5), HEX);
-    Serial.print("0x06 MGLT[2:0]:5 MGHT[2:0]:2\n 0x");
-    Serial.println(readReg(0x6), HEX);
-    Serial.print("0x09 RD:7\n 0x");
-    Serial.println(readReg(0x9), HEX);
-    Serial.print("0x0E FW[7:0]\n 0x");
-    Serial.println(readReg(0xE), HEX);
-    Serial.print("0x10 HYS[7:0]\n 0x");
-    Serial.println(readReg(0x10), HEX);
-    Serial.print("0x1B MGH:7 MGL:6\n 0x");
-    Serial.println(readReg(0x1B), HEX);
+    Serial.print("0x00 Z[7:0]\n");
+    regValue = readReg(0x0);
+    printBinary8(regValue);
+
+    Serial.print("0x01 Z[15:8]\n");
+    regValue = readReg(0x1);
+    printBinary8(regValue);
+
+    Serial.print("0x02 BCT[7:0]\n");
+    regValue = readReg(0x2);
+    printBinary8(regValue);
+
+    Serial.print("0x03 ETY:1 ETX:0\n");
+    regValue = readReg(0x3);
+    printBinary8(regValue);
+
+    Serial.print("0x04 PPT[1:0]:6 ILIP[3:0]:2\n");
+    regValue = readReg(0x4);
+    printBinary8(regValue);
+
+    Serial.print("0x05 PPT[9:2]\n");
+    regValue = readReg(0x5);
+    printBinary8(regValue);
+
+    Serial.print("0x06 MGLT[2:0]:5 MGHT[2:0]:2\n");
+    regValue = readReg(0x6);
+    printBinary8(regValue);
+
+    Serial.print("0x09 RD:7\n");
+    regValue = readReg(0x9);
+    printBinary8(regValue);
+
+    Serial.print("0x0E FW[7:0]\n");
+    regValue = readReg(0xE);
+    printBinary8(regValue);
+
+    Serial.print("0x10 HYS[7:0]\n");
+    regValue = readReg(0x10);
+    printBinary8(regValue);
+
+    Serial.print("0x1B MGH:7 MGL:6\n");
+    regValue = readReg(0x1B);
+    printBinary8(regValue);
   }
   else if (command == "m") {      // 角度出力間隔設定
     angle_interval = parseArgument(arg1);
@@ -112,11 +150,13 @@ void executeCommand(String command, String arg1, String arg2) {
   else if (command == "w") {      // レジスタ書き込み
     uint8_t reg = parseArgument(arg1);
     uint8_t val = parseArgument(arg2);
-    Serial.println(writeReg(reg, val), HEX);
+    regValue = writeReg(reg, val);
+    printBinary8(regValue);
   }
   else if (command == "r") {      // レジスタ読み込み
     uint8_t reg = parseArgument(arg1);
-    Serial.println(readReg(reg), HEX);
+    regValue = readReg(reg);
+    printBinary8(regValue);
   }
   else if (command == "z") {      // ゼロ位置設定
     // 現在の角度を取得
@@ -143,8 +183,9 @@ void executeCommand(String command, String arg1, String arg2) {
                 + 4   * setangle_bin.substring(5, 6).toInt()
                 + 2   * setangle_bin.substring(6, 7).toInt()
                 + 1   * setangle_bin.substring(7, 8).toInt();
-    Serial.print("0x01 Z[15:8]\n 0x");
-    Serial.println(writeReg(1, val), HEX);
+    Serial.print("0x01 Z[15:8]\n");
+    regValue = writeReg(1, val);
+    printBinary8(regValue);
     val         = 128 * setangle_bin.substring(8, 9).toInt()
                 + 64  * setangle_bin.substring(9, 10).toInt()
                 + 32  * setangle_bin.substring(10, 11).toInt()
@@ -153,20 +194,23 @@ void executeCommand(String command, String arg1, String arg2) {
                 + 4   * setangle_bin.substring(13, 14).toInt()
                 + 2   * setangle_bin.substring(14, 15).toInt()
                 + 1   * setangle_bin.substring(15, 16).toInt();
-    Serial.print("0x00 Z[7:0]\n 0x");
-    Serial.println(writeReg(0, val), HEX);    
+    Serial.print("0x00 Z[7:0]\n");
+    regValue = writeReg(0, val);
+    printBinary8(regValue);  
   }
   else if (command == "cw") {     // 時計回りにセット
     uint8_t val = readReg(0x9);
     val &= 0x7F;                    // 0x80ビットをクリア(8bit目を0にする)
-    Serial.print("0x09 RD:7\n 0x");      
-    Serial.println(writeReg(9, val), HEX);
+    Serial.print("0x09 RD:7\n");      
+    regValue = writeReg(9, val);
+    printBinary8(regValue);  
   }
   else if (command == "ccw") {    // 反時計回りにセット
     uint8_t val = readReg(0x9);
     val |= 0x80;                    // 0x80ビットをセット(8bit目を1にする)
-    Serial.print("0x09 RD:7\n 0x");
-    Serial.println(writeReg(9, val), HEX);
+    Serial.print("0x09 RD:7\n");
+    regValue = writeReg(9, val);
+    printBinary8(regValue);  
   }
   else if (command == "ppt") {      // 1回転当たりのパルス数設定
     // 現在の設定を読み込んで表示
@@ -197,12 +241,14 @@ void executeCommand(String command, String arg1, String arg2) {
          + 4   * pulsecount_bin.substring(5, 6).toInt()
          + 2   * pulsecount_bin.substring(6, 7).toInt()
          + 1   * pulsecount_bin.substring(7, 8).toInt(); 
-    val2 &= 0b00111111;                                       //上位2ビットをクリア（0に設定）
+    val2 &=00111111;                                       //上位2ビットをクリア（0に設定）
     val2 |= (pulsecount_bin.substring(8, 10).toInt() << 6);   // 新しい上位2ビットを設定
-    Serial.print("0x04 PPT[1:0]:6 ILIP[3:0]:2\n 0x");
-    Serial.println(writeReg(4, val2), HEX);
-    Serial.print("0x05 PPT[9:2]\n 0x");
-    Serial.println(writeReg(5, val1), HEX);
+    Serial.print("0x04 PPT[1:0]:6 ILIP[3:0]:2\n");
+    regValue = writeReg(4, val2);
+    printBinary8(regValue);
+    Serial.print("0x05 PPT[9:2]\n");
+    regValue = writeReg(5, val1);
+    printBinary8(regValue);
   }
   else {
     printHelp();
