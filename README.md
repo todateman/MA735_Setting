@@ -6,7 +6,7 @@
 
 なお、このArduinoスケッチは
 https://github.com/SWITCHSCIENCE/samplecodes/blob/master/9826_MA735_Digital_Angle_Sensor_Module/ma735_setting/ma735_setting.ino
-を参考にRP2040-Zero用に一部修正しています。
+を参考にXIAO RP2040用に一部修正・機能追加しています。
 
 
 # シリアル通信を利用したMA735の設定方法
@@ -20,13 +20,21 @@ https://github.com/SWITCHSCIENCE/samplecodes/blob/master/9826_MA735_Digital_Angl
 ```
 MA735 Register Settings available commands:
 d
-    print all registers
+  print all registers
 m interval
-    Outputs the angle at interval.
+  Outputs the angle at interval.
 r reg
-    Reads the register at address 'reg'.
+  Reads the register at address 'reg'.
 w reg val
-    Writes 'val' to the register at address 'reg'.
+  Writes 'val' to the register at address 'reg'.
+z
+  Set the current angle to the zero position.
+cw
+  Set the rotation direction to clockwise.
+ccw
+  Set the rotation direction to counterclockwise.
+ppt pulsecount
+  Set the number of pulses per rotation.
 ```
 
 ## 2. レジスタの確認 (```d``` コマンド)
