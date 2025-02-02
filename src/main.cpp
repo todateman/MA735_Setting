@@ -10,7 +10,7 @@ SPISettings settings = SPISettings(10000000, MSBFIRST, SPI_MODE0);
 uint32_t angle_interval = 0;
 uint32_t angle_last = 0;
 
-const int G_IN = 6;                // カムパルスセンサ
+const int G_IN = 0;                // カムパルスセンサ(本体のピン表記は6)
 uint32_t crank_interval = 0;
 uint32_t crank_last = 0;
 float Ne_deg = 0.0;                // 磁気エンコーダのクランク角(deg)
@@ -31,10 +31,16 @@ float readMA735SPI() {
   long diff_rd = rd - _rd;                  // クランク角の差分を計算
   if (diff_rd < -32767) {                   // クランク角の差分が-180°以上の場合(=正転でクランク角が上死点を超えた場合)
     Ne_rev++;                                 // 回転数をカウントアップ
+    if ( G_Pulse_Flag) {                      // カムパルスセンサ立ち上がりフラグONの場合
+      Ne_rev = 0;                               // クランク回転数をリセット
+      G_Pulse_Flag = false;                     // カムパルスセンサの立ち上がりフラグをOFF
+      Serial.println("G_Pulse_Flag: false");
+    }
   }
   else if (diff_rd > 32767) {               // クランク角の差分が180°以上の場合(=逆転でクランク角が上死点を超えた場合)
     Ne_rev--;                                 // 回転数をカウントダウン
   }
+  _rd = rd;                                 // 現在の角度を前回の角度に設定
   return (float)rd / 65535 * 360 + 360 * Ne_rev;  // 0-720(deg)に変換
 }
 
@@ -48,6 +54,8 @@ void printHelp() {
   Serial.println("  Outputs the angle at interval.");
   Serial.println("r reg");
   Serial.println("  Reads the register at address 'reg'.");
+  Serial.println("ne interval");
+  Serial.println("  Outputs the crank angle at interval.");
   Serial.println("w reg val");
   Serial.println("  Writes 'val' to the register at address 'reg'.");
   Serial.println("z");
@@ -297,7 +305,7 @@ void setup() {
   // SPI.setTX(10); // (XIAO RP2040 pin 10 -> MOSI)
   SPI.begin();
   pinMode(MA735_CS, OUTPUT);  
-  pinMode(G_IN, INPUT_PULLUP); // カムパルスセンサ(D5, P102)をプルアップ入力に設定
+  pinMode(G_IN, INPUT_PULLUP); // カムパルスセンサをプルアップ入力に設定
 
   digitalWrite(MA735_CS, HIGH);
 
@@ -334,27 +342,20 @@ void loop() {
     uint32_t curr = millis();
     uint32_t diff = curr - crank_last;
     if (diff >= crank_interval) {
-      
       Ne_deg = readMA735SPI();              // MA735磁気エンコーダSPIの値を取得
-
-      if (Ne_deg > 360.0 && G_Pulse_Flag) { // クランク角が360°より大きい&カムパルスセンサ立ち上がりフラグONの場合
-        Ne_rev = 0;                           // クランク回転数をリセット
-        Ne_deg = readMA735SPI();              // MA735磁気エンコーダSPIの値を取得
-        G_Pulse_Flag = false;                 // カムパルスセンサの立ち上がりフラグをOFF
-      }
-
       Serial.println(Ne_deg, 1);            // クランク角を表示
       crank_last = curr;
     }
   }
 
-  if (digitalRead(G_IN) == HIGH){ // カムパルス(D5, P102)がONの場合
+  if (digitalRead(G_IN)) {  // カムパルスがONの場合
     if (!G_Pulse) {
       G_Pulse = true;
       G_Pulse_Flag = true;
+      Serial.println("G_Pulse_Flag: true");
     }
   }
-  if (digitalRead(G_IN) == LOW){ // カムパルス(D5, P102)がOFFの場合
+  else {                    // カムパルスがOFFの場合
     if (G_Pulse) {
       G_Pulse = false;
     }
