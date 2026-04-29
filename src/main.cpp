@@ -204,6 +204,10 @@ void executeCommand(String command, String arg1, String arg2) {
     Serial.print("angle: ");
     Serial.print(setangle);
     Serial.println(" -> 0");
+    // 現在のZレジスタを読み取る
+    uint16_t z_old = ((uint16_t)readReg(0x1) << 8) | (uint16_t)readReg(0x0);
+    // Z_new = (Z_old - a_OUT) mod 65536  ← 既存のオフセットを考慮した正しい計算
+    setangle = (int)(uint16_t)(((uint32_t)z_old + 65536U - (uint16_t)(uint16_t)setangle) % 65536U);
     // 角度を16bitの2進数に変換
     String setangle_bin;
     setangle_bin = String(setangle, BIN);
